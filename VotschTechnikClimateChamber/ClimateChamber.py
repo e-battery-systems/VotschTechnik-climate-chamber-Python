@@ -2,19 +2,11 @@ import socket
 from threading import RLock
 import time
 
-# The manuals with the documentation are really hard (or impossible) to
-# find using Google. My code is based in Izaak's code [1]. He sent me 
-# via email some manuals, in particular the one in reference [2] which 
-# seems to have the most up to date information on the programming 
-# interface. I found the document from reference [3] which has some 
-# partial information, not as complete as [2] but better than nothing.
-#
-# The communication protocol of this climate chamber is among the worse 
-# protocols I have worked with.
+# This code is based in Izaak's code [1]. I found the document from reference 
+# [2] which has some more information.
 #
 # [1] https://github.com/IzaakWN/ClimateChamberMonitor/blob/858ca67f8fbf2f89cf5b2d85955ca76395e694f4/chamber_commands.py
-# [2] Operation manual, Communication protocol S!MPAC® simserv, file named "SIMPAC_SimServ_en_2019.05_64636625_new.pdf". I could not find this document on Internet.
-# [3] Untitled document, http://lampx.tugraz.at/~hadley/semi/ch9/instruments/VT4002/Simpati_Simserv_Manual_(en).pdf
+# [2] Untitled document, http://lampx.tugraz.at/~hadley/semi/ch9/instruments/VT4002/Simpati_Simserv_Manual_(en).pdf
 
 def _generate_list_of_all_possible_commands(dictionary):
 	"""This function is for internal usage only. The argument <dictionary>
@@ -30,8 +22,6 @@ def _generate_list_of_all_possible_commands(dictionary):
 		return sorted([s.replace(' DELETE_ME_LALALALALALA','') for s in return_list])
 COMMANDS_DICT = {
 	# This dictionary was created by Izaak, see reference [1]. I just adapted it a little bit to be more human readable, and fixed typos in command numbers.
-	# See [2] section 5 for reference on these commands.
-	# Those marked with ✅ I have checked in reference [2].
 	'GET': {
 		'CHAMBER': {
 			'INFO': 99997, # ✅
@@ -51,7 +41,6 @@ COMMANDS_DICT = {
 			'ALARM_LIMIT_MAX': 11015, # ✅
 		},
 		'CONTROL_VALUE': {
-			# ~ 'NUMBER_OF': 13007, This is bad documented in [2], it says "GET NUMBER OF SET VALUES" and description "Number of control values".
 			'NAME': 13011, # ✅
 			'UNIT': 13010, # ✅
 			'SET_POINT': 13005, # ✅
@@ -95,7 +84,7 @@ COMMANDS_DICT = {
 		'GRADIENT_DOWN': { 
 			'VALUE': 11070, # ✅
 		},
-		'PROGRAM':{ # In reference [2] this is called PRG.
+		'PROGRAM':{
 			'NUMBER': 19204, # ✅
 			'NAME': 19031, # ✅
 			'TOTAL_LOOPS': 19004, # ✅
@@ -169,7 +158,6 @@ def create_command_string(command_number: str, *arguments):
 	- arguments: Arguments for the command. These arguments will be 
 	converted into a string so if they need some formatting, you better
 	give me strings already formatted."""
-	# See page 5 of reference [2] or page 3 of [3].
 	_validate_type(command_number, 'command_number', str)
 	try:
 		int(command_number)
@@ -177,11 +165,11 @@ def create_command_string(command_number: str, *arguments):
 		raise ValueError(f'<command_number> must be a string with an integer number, received {command_number} which I dont know how to convert into an integer number.')
 	if len(command_number) != 5:
 		raise ValueError(f'<command_number> musut be a string containing a 5 digits integer number, received {command_number}.')
-	chamber_index = '1' # According to [2], "the chamber index is irrelevant and can always have the value 1"...
+	chamber_index = '1'
 	if len(arguments) > 4:
 		raise ValueError(f'The maximum number of arguments is 4, but received {len(arguments)}.')
 	command_string = ''.encode('ascii')
-	separator_character = b'\xb6' # ASCII code 182, according to [2] page 5.
+	separator_character = b'\xb6'
 	for element in [command_number, str(chamber_index)] + [str(arg) for arg in arguments]:
 		command_string += element.encode('ascii') + separator_character
 	command_string = command_string[:-1] + '\r'.encode('ascii')
@@ -222,7 +210,7 @@ class ClimateChamber:
 		self._communication_lock = RLock() # To make a thread safe implementation.
 		with self._communication_lock:
 			self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			self.socket.connect((ip, 2049)) # According to [2] § 2.2 this is the port, always.
+			self.socket.connect((ip, 2049))
 			self.socket.settimeout(timeout)
 	
 	def query_command_low_level(self, command_number, *arguments):
@@ -230,7 +218,7 @@ class ClimateChamber:
 		string_to_send = create_command_string(str(command_number), *arguments)
 		with self._communication_lock:
 			self.socket.send(string_to_send)
-			response = self.socket.recv(512) # The example in [2] § 6, and also the code in [1], does this.
+			response = self.socket.recv(512)
 		return response
 	
 	def query(self, command_name: str, *arguments):
@@ -281,7 +269,7 @@ class ClimateChamber:
 		if not self._temperature_min <= celsius <= self._temperature_max:
 			raise ValueError(f'Trying to set temperature to {celsius} °C which is outside the temperature limits configured for this instance. These limits allow to set the temperature between {self._temperature_min} and {self._temperature_max} °C.')
 		else:
-			self.query('SET CONTROL_VARIABLE SET_POINT', 1, str(celsius)) # This is based in an example for setting the temperature from [2] § 3.2.
+			self.query('SET CONTROL_VARIABLE SET_POINT', 1, str(celsius))
 	
 	@property
 	def temperature_min(self):
