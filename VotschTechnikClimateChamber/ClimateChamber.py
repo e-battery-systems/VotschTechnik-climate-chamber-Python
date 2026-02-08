@@ -349,6 +349,53 @@ class ClimateChamber:
 		else:
 			raise RuntimeError(f'Queried the climate chamber to see if it was running, I was expecting the answer to be either 0 or 1 but received `{status}` which I dont know how to interpret...')
 
+	@property
+	def error_messages(self):
+		"""Returns a list of active error messages from the climate chamber."""
+		count = int(self.query('GET MESSAGE NUMBER_OF')[0])
+		errors = []
+		for i in range(1, count + 1):
+			text = self.query('GET MESSAGE TEXT', i)[0]
+			status = self.query('GET MESSAGE STATUS', i)[0]
+			if status == '1':
+				errors.append(text)
+		return errors
+
+	@property
+	def humidity_measured(self):
+		"""Returns the measured humidity as a float percentage (%RH)."""
+		return float(self.query('GET CONTROL_VARIABLE ACTUAL_VALUE', 2)[0])
+
+	@property
+	def humidity_set_point(self):
+		"""Returns the set humidity as a float percentage (%RH)."""
+		return float(self.query('GET CONTROL_VARIABLE SET_POINT', 2)[0])
+
+	@property
+	def program_status(self):
+		"""Returns the current program status."""
+		return self.query('GET PROGRAM STATUS', 0)[0]
+
+	@property
+	def active_program_name(self):
+		"""Returns the name of the currently active program, or None if not available."""
+		try:
+			return self.query('GET PROGRAM NAME', 1)[0]
+		except RuntimeError as e:
+			if '-5' in str(e):
+				return None
+			raise e
+
+	@property
+	def gradient_up(self):
+		"""Returns the ramp-up rate as a float."""
+		return float(self.query('GET GRADIENT_UP VALUE', 1)[0])
+
+	@property
+	def gradient_down(self):
+		"""Returns the ramp-down rate as a float."""
+		return float(self.query('GET GRADIENT_DOWN VALUE', 1)[0])
+
 if __name__ == '__main__':
 	import time
 	
